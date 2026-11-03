@@ -1,0 +1,180 @@
+<!doctype html>
+<!--
+  README picture: the loop the script runs for every step. Numbers come from routine.js
+  (run export_routine.py first).
+  Render the light and dark versions (#dark picks the dark theme) with a Chromium-based browser,
+  trim the transparent edge and save as WebP, e.g. for the dark one:
+    msedge --headless=new --hide-scrollbars --force-device-scale-factor=1.5 --window-size=960,600
+           --default-background-color=00000000 --virtual-time-budget=8000 --allow-file-access-from-files
+           --screenshot=raw.png "file:///…/how-it-works.html#dark"
+    magick raw.png -trim +repage -quality 88 -define webp:method=6 ../how-it-works-dark.webp
+  The button pictures are the ones in img/, cropped from the game; they belong to its publisher.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PCR auto daily routine: how it works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=block" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f6f8fa; --ink: #1f2328; --muted: #59636e; --line: #d1d9e0; --card: #ffffff;
+    --blue: #0969da; --green: #1a7f37; --orange: #bc4c00; --red: #cf222e; --purple: #8250df;
+    --shadow: 0 1px 2px rgba(31,35,40,.06), 0 6px 18px rgba(31,35,40,.06);
+    --tint1: rgba(9,105,218,.10); --tint2: rgba(130,80,223,.08); --wire: #afb8c1;
+    --sky1: #cfe7ff; --sky2: #fde6f1; --bar: rgba(255,255,255,.75);
+  }
+  .dark {
+    --bg: #0d1117; --bg2: #151b23; --ink: #f0f6fc; --muted: #9198a1; --line: #3d444d; --card: #151b23;
+    --blue: #4493f8; --green: #3fb950; --orange: #f0883e; --red: #f85149; --purple: #ab7df8;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    --tint1: rgba(68,147,248,.16); --tint2: rgba(171,125,248,.11); --wire: #656c76;
+    --sky1: #27405e; --sky2: #4a2c44; --bar: rgba(13,17,23,.55);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; }
+  body { width: 960px; font-family: Inter, "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: var(--ink); }
+  code, .mono { font-family: "JetBrains Mono", Consolas, monospace; }
+  .frame { position: relative; width: 960px; height: 470px; border-radius: 22px; overflow: hidden;
+           border: 1px solid var(--line);
+           background: radial-gradient(520px 300px at 96% 0%, var(--tint1), transparent 70%),
+                       radial-gradient(420px 260px at 0% 100%, var(--tint2), transparent 70%), var(--bg); }
+  .dots { position: absolute; inset: 0; opacity: .5;
+          background-image: radial-gradient(var(--line) 1px, transparent 1.2px); background-size: 22px 22px;
+          -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 60%, #000 100%); }
+  header { position: absolute; left: 32px; top: 30px; right: 32px; }
+  h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+  .lead { margin: 10px 0 0; font-size: 15.5px; line-height: 1.5; color: var(--muted); max-width: 860px; }
+  .lead b { color: var(--ink); font-weight: 600; }
+
+  .card { position: absolute; top: 140px; height: 206px; background: var(--card); border: 1px solid var(--line);
+          border-radius: 14px; box-shadow: var(--shadow); padding: 12px 14px; }
+  .label { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+           display: flex; align-items: center; gap: 8px; }
+  .label i { width: 20px; height: 20px; border-radius: 6px; display: inline-grid; place-items: center; font-style: normal;
+             font-size: 11px; letter-spacing: 0; color: #fff; background: var(--blue); }
+  .title { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; margin-top: 8px; }
+  .sub { font-size: 12.5px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+  .sub code { font-size: 12px; color: var(--ink); }
+  .pill { display: inline-block; font-family: "JetBrains Mono", Consolas, monospace; font-size: 11.5px; padding: 2px 8px;
+          border-radius: 999px; border: 1px solid var(--line); color: var(--ink); background: var(--bg2); }
+
+  /* A pretend emulator window, built from button images in img/ */
+  .screen { position: relative; width: 176px; height: 104px; border-radius: 8px; overflow: hidden; margin-top: 10px;
+            border: 1px solid var(--line); background: linear-gradient(160deg, var(--sky1), var(--sky2)); }
+  .screen .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: var(--bar);
+                 display: flex; align-items: center; justify-content: space-around; padding: 0 4px; }
+  .screen .bar img { height: 26px; }
+  .screen .menu { position: absolute; right: 6px; top: 6px; height: 20px; }
+  .gray { filter: grayscale(1) contrast(1.05); }
+  .shot-wrap { position: relative; }
+  .hit { position: absolute; border: 2px dashed var(--purple); border-radius: 5px; }
+
+  #desk { left: 32px; width: 206px; }
+  #shot { left: 270px; width: 206px; }
+  #find { left: 508px; width: 214px; }
+  #click { left: 754px; width: 174px; }
+  .tpl { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .tpl img { height: 30px; border-radius: 4px; outline: 2px dashed var(--purple); outline-offset: 3px; }
+  .cursor { position: relative; margin: 14px 0 0 6px; width: 120px; height: 44px; }
+  .cursor img { height: 34px; }
+  .cursor svg { position: absolute; left: 34px; top: 12px; }
+
+  svg.wires { position: absolute; inset: 0; pointer-events: none; }
+  .wire { fill: none; stroke: var(--wire); stroke-width: 2; stroke-dasharray: 5 6; }
+  .wire.again { stroke: var(--orange); }
+  .wire.next { stroke: var(--blue); }
+  .head { fill: var(--wire); }
+  .head.again { fill: var(--orange); }
+  .head.next { fill: var(--blue); }
+  .wl { position: absolute; font-size: 12.5px; color: var(--muted); white-space: nowrap; background: var(--bg);
+        padding: 0 8px; transform: translateX(-50%); text-align: center; line-height: 1.35; }
+  .wl b { font-weight: 600; }
+  .wl.again b { color: var(--orange); }
+  .wl.next b { color: var(--blue); }
+</style>
+</head>
+<body>
+<script>if (location.hash === '#dark') document.documentElement.className = 'dark';</script>
+<script src="routine.js"></script>
+<div class="frame">
+  <div class="dots"></div>
+  <header>
+    <h1>How it works</h1>
+    <p class="lead">It plays the way you would: <b>look at the screen, find the button, click it.</b>
+      Only the screen and the mouse are used, so nothing is installed in the game or the emulator.
+      <code>routine.py</code> lists which button comes next.</p>
+  </header>
+
+  <div class="card" id="desk">
+    <div class="label"><i>1</i>Your desktop</div>
+    <div class="screen" id="screen-color">
+      <img class="menu" src="../../../img/menu.png" alt="">
+      <div class="bar">
+        <img src="../../../img/home-after.png" alt="">
+        <img src="../../../img/adventure-before.png" alt="">
+        <img id="target" src="../../../img/gachapon-before.png" alt="">
+      </div>
+    </div>
+    <div class="sub">The game runs in an Android emulator window on your PC.</div>
+  </div>
+
+  <div class="card" id="shot">
+    <div class="label"><i>2</i>Screenshot</div>
+    <div class="shot-wrap" id="shot-wrap"><div class="screen gray" id="screen-gray"></div></div>
+    <div class="sub">One picture of every monitor, turned gray. <code>mss</code></div>
+  </div>
+
+  <div class="card" id="find">
+    <div class="label"><i>3</i>Find the button</div>
+    <div class="tpl"><img src="../../../img/gachapon-before.png" alt=""><span class="pill" id="score"></span></div>
+    <div class="sub" id="find-sub"></div>
+  </div>
+
+  <div class="card" id="click">
+    <div class="label"><i>4</i>Click</div>
+    <div class="cursor">
+      <img src="../../../img/gachapon-before.png" alt="">
+      <svg width="22" height="26" viewBox="0 0 22 26"><path d="M2 2 L2 21 L7 16.5 L10.5 24 L14 22.5 L10.5 15 L17.5 15 Z" fill="var(--ink)" stroke="var(--card)" stroke-width="1.6" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="sub">The mouse jumps to the centre, clicks, and goes back to where it was. <code>mouse</code></div>
+  </div>
+
+  <svg class="wires" width="960" height="470">
+    <path class="wire" d="M240 243 H262"/><path class="head" d="M268 243 l-9 -5 v10 z"/>
+    <path class="wire" d="M478 243 H500"/><path class="head" d="M506 243 l-9 -5 v10 z"/>
+    <path class="wire" d="M724 243 H746"/><path class="head" d="M752 243 l-9 -5 v10 z"/>
+    <path class="wire again" d="M600 348 V384 Q600 392 592 392 H346 Q338 392 338 384 V356"/>
+    <path class="head again" d="M338 350 l-5 9 h10 z"/>
+    <path class="wire next" d="M841 348 V432 Q841 440 833 440 H143 Q135 440 135 432 V356"/>
+    <path class="head next" d="M135 350 l-5 9 h10 z"/>
+  </svg>
+  <div class="wl again" style="left: 469px; top: 380px;" id="again"></div>
+  <div class="wl next" style="left: 488px; top: 431px;"><b>The game moves on</b>, and the next step in the routine starts</div>
+</div>
+<script>
+  const S = window.ROUTINE.settings;
+  const threshold = S.match_threshold.toFixed(2);
+  document.getElementById('score').textContent = `score ≥ ${threshold}`;
+  document.getElementById('find-sub').innerHTML =
+    `OpenCV slides the button image over the screenshot and takes the first spot that scores at least ` +
+    `${threshold} (1.00 is a perfect fit). <code>img/*.png</code>`;
+  document.getElementById('again').innerHTML =
+    `<b>Not there yet?</b> Look again, up to ${+S.wait_timeout} s.<br>Still missing: this task stops.`;
+
+  // The screenshot card shows the same pretend window, in gray, with the found button outlined
+  // the same way as the button image in card 3.
+  const gray = document.getElementById('screen-gray');
+  gray.innerHTML = document.getElementById('screen-color').innerHTML;
+  const target = document.getElementById('target').getBoundingClientRect();
+  const origin = document.getElementById('screen-color').getBoundingClientRect();
+  const offset = gray.getBoundingClientRect();
+  const hit = document.createElement('div');
+  hit.className = 'hit';
+  Object.assign(hit.style, { left: `${target.left - origin.left + offset.left - gray.parentElement.getBoundingClientRect().left - 4}px`,
+                             top: `${target.top - origin.top + offset.top - gray.parentElement.getBoundingClientRect().top - 4}px`,
+                             width: `${target.width + 8}px`, height: `${target.height + 8}px` });
+  document.getElementById('shot-wrap').appendChild(hit);
+</script>
+</body>
+</html>
