@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import logging
 import sys
 from collections.abc import Callable, Sequence
@@ -14,6 +15,18 @@ from .routine import DAILY_ROUTINE, TASKS
 from .vision import TemplateError, load_templates
 
 log = logging.getLogger(__name__)
+
+
+def utf8_output() -> None:
+    """Write UTF-8 even when the output goes to a pipe or a file.
+
+    On Windows, Python uses the system code page for those (cp1252 on an English system),
+    which cannot encode the Chinese task names and log lines, so printing them fails.
+    Python 3.15 writes UTF-8 by default (PEP 686); drop this once 3.15 is the oldest supported.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper) and stream.encoding.replace("-", "").lower() != "utf8":
+            stream.reconfigure(encoding="utf-8")
 
 
 def desktop(settings: Settings) -> tuple[Screen, Pointer]:
@@ -43,6 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None, *, settings: Settings | None = None,
          devices: Callable[[Settings], tuple[Screen, Pointer]] = desktop) -> int:
+    utf8_output()
     parser = build_parser()
     args = parser.parse_args(argv)
     names = args.tasks or list(DAILY_ROUTINE)

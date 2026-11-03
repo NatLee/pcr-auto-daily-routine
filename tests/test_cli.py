@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import dataclasses
+import io
 import logging
+import sys
 
 import pytest
 from fakes import SETTINGS, FakeClock, FakeDesktop, Shown
@@ -39,6 +41,16 @@ def test_help_lists_every_task(capsys):
     for name, task in TASKS.items():
         assert name in out and task.title in out
     assert "With no TASK it runs: free-gachapon explorer dungeon" in out
+
+
+def test_help_prints_on_a_pipe_with_a_western_code_page(monkeypatch):
+    # Regression: on an English Windows, piped output is cp1252 and cannot encode 免費轉蛋.
+    pipe = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", pipe)
+    with pytest.raises(SystemExit):
+        cli.main(["--help"])
+    sys.stdout.flush()
+    assert "免費轉蛋" in pipe.buffer.getvalue().decode("utf-8")
 
 
 def test_unknown_task_is_a_usage_error(capsys):
