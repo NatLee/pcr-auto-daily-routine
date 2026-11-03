@@ -1,0 +1,150 @@
+<!doctype html>
+<!--
+  README picture: every task, step by step, drawn from routine.js (run export_routine.py first).
+  Render the light and dark versions (#dark picks the dark theme) with a Chromium-based browser,
+  trim the transparent edge and save as WebP, e.g. for the dark one:
+    msedge --headless=new --hide-scrollbars --force-device-scale-factor=1.5 --window-size=960,1600
+           --default-background-color=00000000 --virtual-time-budget=8000 --allow-file-access-from-files
+           --screenshot=raw.png "file:///…/routine.html#dark"
+    magick raw.png -trim +repage -quality 88 -define webp:method=6 ../daily-routine-dark.webp
+  The button pictures are the ones in img/, cropped from the game; they belong to its publisher.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PCR daily routine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=block" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f6f8fa; --ink: #1f2328; --muted: #59636e; --line: #d1d9e0; --card: #ffffff;
+    --blue: #0969da; --green: #1a7f37; --orange: #bc4c00; --purple: #8250df;
+    --shadow: 0 1px 2px rgba(31,35,40,.06), 0 4px 12px rgba(31,35,40,.06);
+    --tint1: rgba(9,105,218,.09); --tint2: rgba(130,80,223,.07); --well: #f6f8fa;
+  }
+  .dark {
+    --bg: #0d1117; --bg2: #151b23; --ink: #f0f6fc; --muted: #9198a1; --line: #3d444d; --card: #151b23;
+    --blue: #4493f8; --green: #3fb950; --orange: #f0883e; --purple: #ab7df8;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+    --tint1: rgba(68,147,248,.14); --tint2: rgba(171,125,248,.10); --well: #0d1117;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; }
+  body { width: 960px; font-family: Inter, "Noto Sans TC", "Microsoft JhengHei", sans-serif; color: var(--ink); }
+  .mono { font-family: "JetBrains Mono", Consolas, monospace; }
+  .frame { position: relative; width: 960px; border-radius: 22px; overflow: hidden; border: 1px solid var(--line);
+           padding: 32px 32px 28px;
+           background: radial-gradient(520px 300px at 96% 0%, var(--tint1), transparent 70%),
+                       radial-gradient(420px 260px at 0% 100%, var(--tint2), transparent 70%), var(--bg); }
+  h1 { margin: 0; font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+  .lead { margin: 10px 0 0; font-size: 15.5px; line-height: 1.5; color: var(--muted); max-width: 820px; }
+  .lead b { color: var(--ink); font-weight: 600; }
+  .lead code { font-family: "JetBrains Mono", Consolas, monospace; font-size: 14px; color: var(--ink);
+               background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+
+  .lane { display: grid; grid-template-columns: 112px 1fr; gap: 12px; margin-top: 14px; padding-top: 14px;
+          border-top: 1px dashed var(--line); }
+  .lane:first-of-type { border-top: 0; }
+  .who { padding-top: 6px; }
+  .who .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; font-weight: 700;
+            font-size: 13px; color: #fff; background: var(--blue); margin-bottom: 8px; }
+  .who .name { font-family: "JetBrains Mono", Consolas, monospace; font-size: 14px; font-weight: 600; }
+  .who .title { font-size: 14px; color: var(--muted); margin-top: 3px; }
+  .steps { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 0; }
+  .step { display: flex; align-items: center; }
+  .arrow { color: var(--muted); font-size: 16px; line-height: 1; width: 16px; text-align: center; opacity: .8; }
+  .step:first-child .arrow { display: none; }
+
+  .chip { display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--card);
+          border: 1px solid var(--line); border-radius: 10px; padding: 6px 7px 5px; box-shadow: var(--shadow); }
+  .pics { height: 34px; display: flex; align-items: center; gap: 4px; }
+  .crop { position: relative; overflow: hidden; border-radius: 5px; flex: none; }
+  .crop img { position: absolute; }
+  .cap { font-size: 10.5px; color: var(--muted); white-space: nowrap; line-height: 1.2; }
+  .cap b { color: var(--ink); font-weight: 600; }
+  .chip.switch { border-color: color-mix(in srgb, var(--purple) 45%, var(--line)); }
+  .chip.switch .cap b { color: var(--purple); }
+  .chip.pause { border-style: dashed; box-shadow: none; background: transparent; }
+  .chip.pause .pics { font-size: 16px; font-weight: 700; color: var(--orange); gap: 6px; padding: 0 4px; }
+  .tiny-arrow { color: var(--purple); font-size: 14px; }
+  .note { color: var(--orange); font-weight: 600; }
+
+  .extra { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .extra h2 { margin: 0 0 4px; font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .extra .row { display: flex; gap: 26px; flex-wrap: wrap; }
+  .extra .lane { grid-template-columns: auto; gap: 8px; margin-top: 8px; padding-top: 0; border: 0; }
+  .extra .who { padding-top: 0; display: flex; gap: 8px; align-items: baseline; }
+  .extra .who .title { margin: 0; }
+  .legend { margin-top: 18px; display: flex; gap: 22px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend i { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--line); background: var(--card); }
+  .legend i.sw { border-color: var(--purple); }
+  .legend i.pa { border-style: dashed; background: transparent; }
+</style>
+</head>
+<body>
+<script>if (location.hash === '#dark') document.documentElement.className = 'dark';</script>
+<script src="routine.js"></script>
+<div class="frame" id="frame">
+  <h1>The daily routine</h1>
+  <p class="lead" id="lead"></p>
+  <div id="daily"></div>
+  <div class="legend" id="legend"></div>
+  <div class="extra">
+    <h2>Also on the command line</h2>
+    <div class="row" id="extra"></div>
+  </div>
+</div>
+<script>
+  const R = window.ROUTINE, S = R.settings;
+  const IMG = '../../../img/';
+  const BOX_W = 92, BOX_H = 34;
+  const secs = s => `${+s} s`;
+
+  function crop(info) {
+    const [x, y, w, h] = info.box, [W, H] = info.size;
+    const k = Math.min(1, BOX_W / w, BOX_H / h);
+    return `<span class="crop" style="width:${w * k}px;height:${h * k}px">` +
+           `<img src="${IMG}${info.file}" style="width:${W * k}px;height:${H * k}px;left:${-x * k}px;top:${-y * k}px" alt=""></span>`;
+  }
+
+  function chip(step) {
+    if (step.kind === 'switch') {
+      return `<div class="chip switch"><div class="pics">${crop(step.before)}<span class="tiny-arrow">→</span>${crop(step.after)}</div>` +
+             `<div class="cap">go to <b>${step.label}</b></div></div>`;
+    }
+    if (step.kind === 'pause') {
+      return `<div class="chip pause"><div class="pics">⏱ ${secs(step.seconds)}</div>` +
+             `<div class="cap">${step.reason || 'next task'}</div></div>`;
+    }
+    const notes = [];
+    if (step.timeout !== S.wait_timeout) notes.push(`<span class="note">wait ≤ ${secs(step.timeout)}</span>`);
+    if (step.pause_before) notes.push(`${secs(step.pause_before)} → click`);
+    if (step.pause_after) notes.push(`click → ${secs(step.pause_after)}`);
+    if (step.optional) notes.push('if it is there');
+    return `<div class="chip"><div class="pics">${crop(step.image)}</div>` +
+           `<div class="cap">${notes.join(' · ') || 'click'}</div></div>`;
+  }
+
+  function lane(task, number) {
+    const steps = task.steps.map(s => `<div class="step"><span class="arrow">›</span>${chip(s)}</div>`).join('');
+    const badge = number ? `<div class="n">${number}</div>` : '';
+    return `<div class="lane"><div class="who">${badge}<div class="name">${task.name}</div>` +
+           `<div class="title">${task.title}</div></div><div class="steps">${steps}</div></div>`;
+  }
+
+  const byName = Object.fromEntries(R.tasks.map(t => [t.name, t]));
+  document.getElementById('lead').innerHTML =
+    `<code>python main.py</code> runs these three tasks in order. Each step looks for its button for up to ` +
+    `<b>${secs(S.wait_timeout)}</b>; a tab gets ${secs(S.switch_before_timeout)} to show up and ` +
+    `${secs(S.switch_after_timeout)} to switch. If a button never shows up, that task stops and the next one starts.`;
+  document.getElementById('daily').innerHTML = R.daily.map((name, i) => lane(byName[name], i + 1)).join('');
+  document.getElementById('extra').innerHTML =
+    R.tasks.filter(t => !R.daily.includes(t.name)).map(t => lane(t, 0)).join('');
+  document.getElementById('legend').innerHTML =
+    `<span><i></i>find this button, click its centre</span>` +
+    `<span><i class="sw"></i>tab: click it unless the page is already open</span>` +
+    `<span><i class="pa"></i>fixed wait</span>`;
+</script>
+</body>
+</html>

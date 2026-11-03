@@ -1,7 +1,4 @@
-
 opencv-python
-opencv-contrib-python
 numpy
 mouse
 mss
-matplotlib

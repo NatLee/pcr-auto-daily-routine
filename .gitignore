@@ -11,3 +11,7 @@ desktop.ini
 
 *-report
 
+
+.venv/
+.pytest_cache/
+.ruff_cache/
